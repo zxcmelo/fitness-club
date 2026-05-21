@@ -1,0 +1,15 @@
+<%- include('partials/header', { title: 'Ошибка' }) %>
+
+<div class="auth-page">
+  <div class="auth-card text-center">
+    <div class="success-icon">⚠️</div>
+    <h1 class="auth-title">Что-то пошло не так</h1>
+    <p><%= message || 'Произошла непредвиденная ошибка.' %></p>
+    <br>
+    <a href="/" class="btn btn-primary">На главную</a>
+    &nbsp;
+    <a href="javascript:history.back()" class="btn btn-outline">Назад</a>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

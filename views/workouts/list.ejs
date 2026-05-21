@@ -1,0 +1,267 @@
+<%- include('../partials/header', { title: 'Тренировки' }) %>
+
+<div class="container section">
+  <div class="page-header">
+    <h1>Расписание тренировок</h1>
+    <% if (user && user.role === 'admin') { %>
+      <a href="/workouts/add" class="btn btn-primary">+ Добавить тренировку</a>
+    <% } %>
+  </div>
+
+  <!-- Flash-сообщения -->
+  <div id="flashMsg"></div>
+
+  <!-- Функция 2: проверка удалённых тренировок -->
+  <% if (user && user.role !== 'admin') { %>
+  <script>
+    // Сохраняем ID тренировок пользователя с сервера
+    const serverBookingIds = <%- JSON.stringify(userBookings) %>;
+
+    // Проверяем удалённые тренировки при загрузке страницы
+    async function checkDeletedWorkouts() {
+      try {
+        const res  = await fetch('/workouts/my-ids');
+        const data = await res.json();
+        const actualIds = data.ids;
+
+        // Если какой-то ID из сохранённых не в актуальном списке — тренировка удалена
+        const deleted = serverBookingIds.filter(id => !actualIds.includes(id));
+        if (deleted.length > 0) {
+          showAlert('⚠️ Одна или несколько ваших тренировок были удалены администратором.', 'error');
+        }
+      } catch (e) {
+        // игнорируем ошибки сети
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', checkDeletedWorkouts);
+  </script>
+  <% } %>
+
+  <script>
+    // Flash-сообщения из URL параметров
+    const params = new URLSearchParams(window.location.search);
+    const msgs = {
+      booked:        '✅ Вы успешно записаны на тренировку!',
+      cancelled:     '✅ Запись отменена.',
+      added:         '✅ Тренировка добавлена.',
+      updated:       '✅ Тренировка обновлена.',
+      deleted:       '✅ Тренировка удалена.',
+      no_slots:      '❌ Нет свободных мест.',
+      not_found:     '❌ Тренировка не найдена.',
+      past:          '❌ Нельзя записаться на тренировку, которая уже прошла.',
+      time_conflict: '❌ Вы уже записаны на другую тренировку в это время.',
+      server:        '❌ Ошибка сервера. Попробуйте ещё раз.',
+    };
+
+    function showAlert(text, type) {
+      const div = document.getElementById('flashMsg');
+      div.className = 'alert alert-' + type;
+      div.textContent = text;
+      // Убираем через 6 секунд
+      setTimeout(() => { div.style.opacity = '0'; setTimeout(() => div.textContent = '', 500); }, 6000);
+    }
+
+    const key = params.get('success') || params.get('error');
+    if (key && msgs[key]) {
+      document.addEventListener('DOMContentLoaded', () => {
+        showAlert(msgs[key], params.get('success') ? 'success' : 'error');
+      });
+    }
+  </script>
+
+  <!-- ================================
+       Функция 3: Фильтрация
+       ================================ -->
+  <div class="filters-bar">
+    <form action="/workouts" method="GET" class="filters-form" id="filterForm">
+      <!-- Сохраняем страницу при фильтрации -->
+      <input type="hidden" name="page" value="1">
+
+      <div class="filter-group">
+        <span class="filter-label">Тип:</span>
+        <button type="button" class="filter-btn <%= filterType === '' ? 'active' : '' %>"
+                onclick="setFilter('type', '')">Все</button>
+        <% const typeLabels = { yoga: 'Йога', boxing: 'Бокс', cardio: 'Кардио', pilates: 'Пилатес', strength: 'Силовая', stretching: 'Стретчинг', dance: 'Танцы', functional: 'Функциональная', trx: 'TRX', aqua: 'Аквааэробика' }; %>
+        <% types.forEach(t => { %>
+          <button type="button"
+                  class="filter-btn <%= filterType === t ? 'active' : '' %>"
+                  onclick="setFilter('type', '<%= t %>')">
+            <%= typeLabels[t] || t %>
+          </button>
+        <% }) %>
+      </div>
+
+      <div class="filter-group">
+        <span class="filter-label">Уровень:</span>
+        <button type="button" class="filter-btn <%= filterLevel === '' ? 'active' : '' %>"
+                onclick="setFilter('level', '')">Все</button>
+        <% const levelLabels = { beginner: 'Новичок', intermediate: 'Средний', advanced: 'Продвинутый' }; %>
+        <% levels.forEach(l => { %>
+          <button type="button"
+                  class="filter-btn <%= filterLevel === l ? 'active' : '' %>"
+                  onclick="setFilter('level', '<%= l %>')">
+            <%= levelLabels[l] || l %>
+          </button>
+        <% }) %>
+      </div>
+
+      <input type="hidden" name="type"  id="filterTypeInput"  value="<%= filterType %>">
+      <input type="hidden" name="level" id="filterLevelInput" value="<%= filterLevel %>">
+    </form>
+  </div>
+
+  <script>
+    function setFilter(key, value) {
+      if (key === 'type')  document.getElementById('filterTypeInput').value  = value;
+      if (key === 'level') document.getElementById('filterLevelInput').value = value;
+      document.getElementById('filterForm').submit();
+    }
+  </script>
+
+  <!-- Список тренировок -->
+  <% if (workouts.length === 0) { %>
+    <p class="empty-state">Тренировок по выбранным фильтрам нет.</p>
+  <% } %>
+
+  <div class="cards-grid" id="workoutsList">
+    <% workouts.forEach(w => {
+      const isBooked  = userBookings.includes(w.id);
+      const isFull    = parseInt(w.booked_count) >= parseInt(w.max_slots);
+      const freeSlots = w.max_slots - w.booked_count;
+      const isPast    = w.workout_date && new Date(w.workout_date) < new Date();
+
+      // Функция 4: проверяем конфликт времени на клиенте (для отображения)
+      let hasConflict = false;
+      if (w.workout_date && !isBooked) {
+        const wStart = new Date(w.workout_date).getTime();
+        const wEnd   = wStart + (w.duration_minutes || 60) * 60000;
+        // userBookingDates передаётся как JSON в шаблон ниже
+      }
+    %>
+      <div class="card workout-card <%= isPast ? 'card-past' : '' %>">
+
+        <!-- Бейджи -->
+        <% if (isPast) { %>
+          <div class="card-badge card-badge-gray">Прошла</div>
+        <% } else if (isFull) { %>
+          <div class="card-badge card-badge-red">Мест нет</div>
+        <% } else { %>
+          <div class="card-badge"><%= w.price %> ₽</div>
+        <% } %>
+
+        <!-- Теги типа и уровня -->
+        <div class="card-tags">
+          <% if (w.workout_type) { %>
+            <span class="tag tag-type"><%= w.workout_type %></span>
+          <% } %>
+          <% if (w.difficulty) { %>
+            <span class="tag tag-<%= w.difficulty %>">
+              <% if (w.difficulty === 'beginner') { %>Новичок
+              <% } else if (w.difficulty === 'intermediate') { %>Средний
+              <% } else { %>Продвинутый<% } %>
+            </span>
+          <% } %>
+        </div>
+
+        <h3 class="card-title"><%= w.title %></h3>
+        <p class="card-text"><%= w.description || '—' %></p>
+
+        <div class="card-meta">
+          <span>👤 <%= w.trainer || 'Не указан' %></span>
+          <% if (w.workout_date) { %>
+            <span>📅 <%= new Date(w.workout_date).toLocaleString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) %></span>
+          <% } %>
+          <% if (w.duration_minutes) { %>
+            <span>⏱ <%= w.duration_minutes %> мин</span>
+          <% } %>
+          <span>🪑 Свободно: <%= freeSlots %> / <%= w.max_slots %></span>
+        </div>
+
+        <!-- Кнопки для клиента -->
+        <% if (user && user.role !== 'admin') { %>
+          <% if (isBooked) { %>
+            <form action="/workouts/<%= w.id %>/cancel" method="POST" style="display:inline">
+              <button type="submit" class="btn btn-sm btn-outline">Отменить запись</button>
+            </form>
+          <% } else if (isPast) { %>
+            <button class="btn btn-sm" disabled title="Тренировка уже прошла">Запись закрыта</button>
+          <% } else if (!isFull) { %>
+            <form action="/workouts/<%= w.id %>/book" method="POST" style="display:inline"
+                  class="book-form" data-workout-id="<%= w.id %>"
+                  data-start="<%= w.workout_date ? new Date(w.workout_date).getTime() : '' %>"
+                  data-duration="<%= w.duration_minutes || 60 %>">
+              <button type="submit" class="btn btn-sm">Записаться</button>
+            </form>
+          <% } else { %>
+            <button class="btn btn-sm" disabled>Нет мест</button>
+          <% } %>
+        <% } else if (!user) { %>
+          <a href="/auth/login" class="btn btn-sm btn-outline">Войти для записи</a>
+        <% } %>
+
+        <!-- Кнопки для администратора -->
+        <% if (user && user.role === 'admin') { %>
+          <div class="admin-actions">
+            <a href="/workouts/<%= w.id %>/edit" class="btn btn-sm btn-outline">Редактировать</a>
+            <form action="/workouts/<%= w.id %>/delete" method="POST" style="display:inline"
+                  onsubmit="return confirm('Удалить тренировку «<%= w.title %>»?')">
+              <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+            </form>
+          </div>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+
+  <!-- Функция 4: клиентская проверка конфликта времени -->
+  <% if (user && user.role !== 'admin') { %>
+  <script>
+    const myBookingDates = <%- JSON.stringify(userBookingDates) %>;
+
+    document.querySelectorAll('.book-form').forEach(form => {
+      form.addEventListener('submit', function(e) {
+        const startTs  = parseInt(this.dataset.start);
+        const duration = parseInt(this.dataset.duration) || 60;
+        if (!startTs) return; // если дата не указана — пропускаем
+
+        const newStart = startTs;
+        const newEnd   = startTs + duration * 60000;
+
+        // Проверяем пересечение с уже записанными тренировками
+        for (const b of myBookingDates) {
+          if (!b.workout_date) continue;
+          const bStart = new Date(b.workout_date).getTime();
+          const bEnd   = bStart + (b.duration_minutes || 60) * 60000;
+
+          // Тренировки пересекаются если одна начинается до окончания другой
+          if (newStart < bEnd && newEnd > bStart) {
+            e.preventDefault();
+            showAlert('❌ Вы уже записаны на другую тренировку в это время.', 'error');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+          }
+        }
+      });
+    });
+  </script>
+  <% } %>
+
+  <!-- Пагинация -->
+  <% if (totalPages > 1) { %>
+  <div class="pagination">
+    <% if (page > 1) { %>
+      <a href="/workouts?page=<%= page - 1 %>&type=<%= filterType %>&level=<%= filterLevel %>" class="page-btn">← Назад</a>
+    <% } %>
+    <% for (let i = 1; i <= totalPages; i++) { %>
+      <a href="/workouts?page=<%= i %>&type=<%= filterType %>&level=<%= filterLevel %>"
+         class="page-btn <%= i === page ? 'active' : '' %>"><%= i %></a>
+    <% } %>
+    <% if (page < totalPages) { %>
+      <a href="/workouts?page=<%= page + 1 %>&type=<%= filterType %>&level=<%= filterLevel %>" class="page-btn">Вперёд →</a>
+    <% } %>
+  </div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

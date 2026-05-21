@@ -1,0 +1,114 @@
+<%- include('partials/header', { title: 'Главная' }) %>
+
+<!-- Герой-секция -->
+<section class="hero">
+  <div class="hero-content">
+    <h1 class="hero-title">СТАНЬ ЛУЧШЕЙ<br>ВЕРСИЕЙ СЕБЯ</h1>
+    <p class="hero-sub">Профессиональные тренеры · Современное оборудование · Результат гарантирован</p>
+    <div class="hero-btns">
+      <a href="/workouts" class="btn btn-primary">Смотреть тренировки</a>
+      <% if (!user) { %>
+        <a href="/auth/register" class="btn btn-outline">Вступить в клуб</a>
+      <% } else { %>
+        <a href="/profile" class="btn btn-outline">Мой профиль</a>
+      <% } %>
+    </div>
+  </div>
+  <div class="hero-decor" aria-hidden="true"></div>
+</section>
+
+<!-- Статистика клуба -->
+<section class="stats-bar">
+  <div class="container stats-grid">
+    <div class="stat-item">
+      <span class="stat-num" data-target="500">0</span>
+      <span class="stat-label">Клиентов</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num" data-target="12">0</span>
+      <span class="stat-label">Тренеров</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num" data-target="30">0</span>
+      <span class="stat-label">Программ</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num" data-target="5">0</span>
+      <span class="stat-label">Лет опыта</span>
+    </div>
+  </div>
+</section>
+
+<!-- Ближайшие тренировки -->
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">Ближайшие тренировки</h2>
+    <p class="section-sub">Запишитесь прямо сейчас — места ограничены</p>
+
+    <div class="cards-grid">
+      <% if (featuredWorkouts.length === 0) { %>
+        <p class="empty-state">Тренировки появятся скоро. Заходите позже!</p>
+      <% } %>
+      <% featuredWorkouts.forEach(w => { %>
+        <div class="card workout-card">
+          <div class="card-badge"><%= w.price %> ₽</div>
+          <h3 class="card-title"><%= w.title %></h3>
+          <p class="card-text"><%= w.description || 'Описание скоро появится.' %></p>
+          <div class="card-meta">
+            <span>👤 <%= w.trainer || 'Тренер не указан' %></span>
+            <% if (w.workout_date) { %>
+              <span>📅 <%= new Date(w.workout_date).toLocaleDateString('ru-RU') %></span>
+            <% } %>
+          </div>
+          <a href="/workouts" class="btn btn-sm">Подробнее →</a>
+        </div>
+      <% }) %>
+    </div>
+
+    <div class="section-cta">
+      <a href="/workouts" class="btn btn-primary">Все тренировки</a>
+    </div>
+  </div>
+</section>
+
+<!-- Преимущества -->
+<section class="section section-dark">
+  <div class="container">
+    <h2 class="section-title">Почему выбирают нас</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🏋️</div>
+        <h3>Современный зал</h3>
+        <p>Более 200 единиц профессионального оборудования от ведущих производителей.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👨‍🏫</div>
+        <h3>Сертифицированные тренеры</h3>
+        <p>Каждый тренер имеет международный сертификат и минимум 5 лет практики.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h3>Удобное расписание</h3>
+        <p>Онлайн-запись на тренировки, уведомления о занятиях, история тренировок.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🥇</div>
+        <h3>Гарантия результата</h3>
+        <p>Индивидуальный подход и система контроля прогресса для каждого клиента.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<% if (!user) { %>
+<section class="section cta-section">
+  <div class="container cta-inner">
+    <h2>Готов начать?</h2>
+    <p>Зарегистрируйся сегодня и получи первое занятие бесплатно!</p>
+    <a href="/auth/register" class="btn btn-primary btn-lg">Зарегистрироваться бесплатно</a>
+  </div>
+</section>
+<% } %>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,205 @@
+<%- include('partials/header', { title: 'Личный кабинет' }) %>
+
+<div class="container section">
+  <h1 class="page-title">Личный кабинет</h1>
+
+  <!-- Уведомления -->
+  <% const messages = {
+    avatar:   { type: 'success', text: '✅ Аватар успешно обновлён!' },
+    photo:    { type: 'success', text: '✅ Фото результата загружено!' },
+    password: { type: 'success', text: '✅ Пароль успешно изменён. Уведомление отправлено на почту.' },
+    no_file:  { type: 'error',   text: '❌ Выберите файл для загрузки.' },
+    server:   { type: 'error',   text: '❌ Ошибка сервера. Попробуйте ещё раз.' },
+  };
+  const msgKey = success;
+  %>
+  <% if (msgKey && messages[msgKey]) { %>
+    <div class="alert alert-<%= messages[msgKey].type %>"><%= messages[msgKey].text %></div>
+  <% } %>
+
+  <div class="profile-grid">
+
+    <!-- Левая колонка: данные пользователя -->
+    <div class="profile-sidebar">
+
+      <!-- Аватар -->
+      <div class="avatar-block">
+        <div class="avatar-wrap">
+          <img src="<%= profileUser.avatar_path || '/img/default-avatar.svg' %>"
+               alt="Аватар" class="avatar-img" id="avatarPreview">
+        </div>
+        <form action="/profile/avatar" method="POST" enctype="multipart/form-data" id="avatarForm">
+          <label for="avatarInput" class="btn btn-sm btn-outline" style="cursor:pointer">
+            Сменить фото
+          </label>
+          <input type="file" id="avatarInput" name="avatar" accept="image/*" hidden
+                 onchange="previewAvatar(this); document.getElementById('avatarForm').submit()">
+        </form>
+      </div>
+
+      <!-- Информация -->
+      <div class="profile-info">
+        <h2><%= profileUser.full_name %></h2>
+        <p class="profile-role badge-<%= profileUser.role %>">
+          <%= profileUser.role === 'admin' ? '👑 Администратор' : '🏃 Клиент' %>
+        </p>
+        <p>📧 <%= profileUser.email %></p>
+        <p>📅 С нами с <%= new Date(profileUser.created_at).toLocaleDateString('ru-RU') %></p>
+      </div>
+
+      <a href="/auth/logout" class="btn btn-outline btn-full">Выйти</a>
+    </div>
+
+    <!-- Правая колонка: вкладки -->
+    <div class="profile-content">
+
+      <!-- Табы -->
+      <div class="tabs">
+        <button class="tab active" data-tab="workouts">Мои тренировки</button>
+        <button class="tab" data-tab="photos">Фото результатов</button>
+        <button class="tab" data-tab="password">Сменить пароль</button>
+      </div>
+
+      <!-- Вкладка: тренировки -->
+      <div class="tab-content active" id="tab-workouts">
+        <h3>Записанные тренировки (<%= workouts.length %>)</h3>
+        <% if (workouts.length === 0) { %>
+          <p class="empty-state">Вы ещё не записаны ни на одну тренировку.<br>
+            <a href="/workouts">Посмотреть расписание →</a></p>
+        <% } else { %>
+          <div class="workouts-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Тренировка</th>
+                  <th>Дата</th>
+                  <th>Тренер</th>
+                  <th>Цена</th>
+                  <th>Записан</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% workouts.forEach(w => { %>
+                <tr>
+                  <td><strong><%= w.title %></strong></td>
+                  <td><%= w.workout_date ? new Date(w.workout_date).toLocaleDateString('ru-RU') : '—' %></td>
+                  <td><%= w.trainer || '—' %></td>
+                  <td><%= w.price %> ₽</td>
+                  <td><%= new Date(w.booked_at).toLocaleDateString('ru-RU') %></td>
+                  <td>
+                    <form action="/workouts/<%= w.id %>/cancel" method="POST"
+                          onsubmit="return confirm('Отменить запись?')">
+                      <button type="submit" class="btn btn-sm btn-danger">Отменить</button>
+                    </form>
+                  </td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Вкладка: фото -->
+      <div class="tab-content" id="tab-photos">
+        <h3>Фото результатов</h3>
+        <form action="/profile/upload-result" method="POST" enctype="multipart/form-data"
+              class="upload-form">
+          <label for="resultPhoto" class="upload-zone" id="uploadZone">
+            <span>📷 Нажмите для выбора фото</span>
+            <input type="file" id="resultPhoto" name="result_photo" accept="image/*" hidden
+                   onchange="document.querySelector('.upload-form').submit()">
+          </label>
+        </form>
+
+        <div class="photos-grid">
+          <% if (files.length === 0) { %>
+            <p class="empty-state">Фото результатов пока нет.</p>
+          <% } %>
+          <% files.forEach(f => { %>
+            <div class="photo-item">
+              <img src="<%= f.file_path %>" alt="<%= f.file_type %>"
+                   loading="lazy" onclick="openPhoto(this.src)">
+              <span class="photo-label"><%= f.file_type === 'avatar' ? '👤 Аватар' : '💪 Результат' %></span>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <!-- Вкладка: пароль -->
+      <div class="tab-content" id="tab-password">
+        <h3>Смена пароля</h3>
+        <p class="text-muted">После смены пароля мы отправим уведомление на вашу почту.</p>
+
+        <% if (errors.length > 0) { %>
+          <div class="alert alert-error">
+            <ul><% errors.forEach(e => { %><li><%= e.msg %></li><% }) %></ul>
+          </div>
+        <% } %>
+
+        <form action="/profile/change-password" method="POST" class="form-narrow" novalidate>
+
+          <div class="form-group">
+            <label>Старый пароль</label>
+            <input type="password" name="old_password" required
+                   placeholder="Текущий пароль">
+          </div>
+
+          <div class="form-group">
+            <label>Новый пароль</label>
+            <input type="password" name="new_password" required minlength="6"
+                   placeholder="Минимум 6 символов">
+          </div>
+
+          <div class="form-group">
+            <label>Подтверждение нового пароля</label>
+            <input type="password" name="new_password_confirm" required
+                   placeholder="Повторите новый пароль">
+          </div>
+
+          <button type="submit" class="btn btn-primary">Сменить пароль</button>
+        </form>
+      </div>
+
+    </div><!-- /profile-content -->
+  </div><!-- /profile-grid -->
+</div>
+
+<!-- Модалка для просмотра фото -->
+<div id="photoModal" class="modal" onclick="this.hidden=true" hidden>
+  <img id="modalImg" src="" alt="фото">
+</div>
+
+<script>
+  // Табы
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Превью аватара
+  function previewAvatar(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = e => document.getElementById('avatarPreview').src = e.target.result;
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  // Просмотр фото
+  function openPhoto(src) {
+    document.getElementById('modalImg').src = src;
+    document.getElementById('photoModal').hidden = false;
+  }
+
+  // Открыть нужный таб если ошибка в пароле
+  <% if (errors.length > 0) { %>
+  document.querySelector('[data-tab="password"]').click();
+  <% } %>
+</script>
+
+<%- include('partials/footer') %>

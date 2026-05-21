@@ -1,0 +1,68 @@
+<%- include('../partials/header', { title: 'Регистрация' }) %>
+
+<div class="auth-page">
+  <div class="auth-card">
+    <h1 class="auth-title">Регистрация</h1>
+    <p class="auth-sub">Создайте аккаунт и начните тренироваться</p>
+
+    <!-- Вывод ошибок -->
+    <% if (errors.length > 0) { %>
+      <div class="alert alert-error">
+        <ul>
+          <% errors.forEach(e => { %><li><%= e.msg %></li><% }) %>
+        </ul>
+      </div>
+    <% } %>
+
+    <form id="registerForm" action="/auth/register" method="POST" novalidate>
+
+      <div class="form-group">
+        <label for="full_name">ФИО *</label>
+        <input type="text" id="full_name" name="full_name"
+               value="<%= old.full_name || '' %>"
+               placeholder="Иванов Иван Иванович" required>
+        <span class="field-error" id="err_full_name"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email *</label>
+        <input type="email" id="email" name="email"
+               value="<%= old.email || '' %>"
+               placeholder="ivan@example.com" required>
+        <span class="field-error" id="err_email"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Пароль *</label>
+        <input type="password" id="password" name="password"
+               placeholder="Минимум 6 символов" required minlength="6">
+        <span class="field-error" id="err_password"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="password_confirm">Подтверждение пароля *</label>
+        <input type="password" id="password_confirm" name="password_confirm"
+               placeholder="Повторите пароль" required>
+        <span class="field-error" id="err_confirm"></span>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full" id="submitBtn">
+        <span class="btn-text">Создать аккаунт</span>
+        <span class="loader" hidden></span>
+      </button>
+    </form>
+
+    <!-- OAuth-заглушка (будущий функционал) -->
+    <div class="oauth-divider"><span>или</span></div>
+    <button class="btn btn-google" onclick="alert('OAuth через Google будет добавлен в следующей версии. Используйте обычную регистрацию.')">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3 12.9 3 4 11.9 4 23s8.9 20 20 20c11 0 19.5-7.7 19.5-20 0-1.3-.1-2.7-.3-4h-.2z"/></svg>
+      Войти через Google
+    </button>
+
+    <p class="auth-footer">
+      Уже есть аккаунт? <a href="/auth/login">Войти</a>
+    </p>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

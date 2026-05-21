@@ -1,0 +1,89 @@
+<%- include('../partials/header', { title: workout ? 'Редактировать тренировку' : 'Добавить тренировку' }) %>
+
+<div class="container section">
+  <div class="form-page">
+    <h1><%= workout ? 'Редактировать тренировку' : 'Новая тренировка' %></h1>
+
+    <% if (errors.length > 0) { %>
+      <div class="alert alert-error">
+        <ul><% errors.forEach(e => { %><li><%= e.msg %></li><% }) %></ul>
+      </div>
+    <% } %>
+
+    <form action="/workouts/<%= workout ? workout.id + '/edit' : 'add' %>" method="POST">
+
+      <div class="form-group">
+        <label>Название *</label>
+        <input type="text" name="title" value="<%= workout ? workout.title : '' %>" required>
+      </div>
+
+      <div class="form-group">
+        <label>Описание</label>
+        <textarea name="description" rows="4"><%= workout ? workout.description || '' : '' %></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Дата и время</label>
+          <input type="datetime-local" name="workout_date"
+            value="<%= workout && workout.workout_date ? new Date(workout.workout_date).toISOString().slice(0,16) : '' %>">
+        </div>
+        <div class="form-group">
+          <label>Длительность (мин)</label>
+          <input type="number" name="duration_minutes" min="15" max="300" step="15"
+                 value="<%= workout ? workout.duration_minutes || 60 : 60 %>">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Тип тренировки</label>
+          <select name="workout_type">
+            <option value="">— Выберите тип —</option>
+            <% const types = ['yoga','boxing','cardio','pilates','strength','stretching','dance','functional','trx','aqua'];
+               const typeLabels = { yoga:'Йога', boxing:'Бокс', cardio:'Кардио', pilates:'Пилатес', strength:'Силовая', stretching:'Стретчинг', dance:'Танцы', functional:'Функциональная', trx:'TRX', aqua:'Аквааэробика' };
+               types.forEach(t => { %>
+              <option value="<%= t %>" <%= workout && workout.workout_type === t ? 'selected' : '' %>><%= typeLabels[t] %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Уровень сложности</label>
+          <select name="difficulty">
+            <option value="">— Выберите уровень —</option>
+            <option value="beginner"     <%= workout && workout.difficulty === 'beginner'     ? 'selected' : '' %>>Новичок</option>
+            <option value="intermediate" <%= workout && workout.difficulty === 'intermediate' ? 'selected' : '' %>>Средний</option>
+            <option value="advanced"     <%= workout && workout.difficulty === 'advanced'     ? 'selected' : '' %>>Продвинутый</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Тренер</label>
+          <input type="text" name="trainer" value="<%= workout ? workout.trainer || '' : '' %>" placeholder="ФИО тренера">
+        </div>
+        <div class="form-group">
+          <label>Цена (₽) *</label>
+          <input type="number" name="price" min="0" step="50"
+                 value="<%= workout ? workout.price : 0 %>" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Количество мест *</label>
+        <input type="number" name="max_slots" min="1"
+               value="<%= workout ? workout.max_slots : 15 %>" required>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          <%= workout ? 'Сохранить изменения' : 'Добавить тренировку' %>
+        </button>
+        <a href="/workouts" class="btn btn-outline">Отмена</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title + ' — ' : '' %>Fitness Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- Навигационная панель -->
+<nav class="navbar">
+  <div class="container nav-inner">
+    <a href="/" class="logo">💪 FITNESS CLUB</a>
+    <button class="burger" id="burgerBtn" aria-label="Меню">☰</button>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="/">Главная</a></li>
+      <li><a href="/workouts">Тренировки</a></li>
+      <% if (user) { %>
+        <li><a href="/profile">Профиль</a></li>
+        <% if (user.role === 'admin') { %>
+          <li><a href="/admin">Админ</a></li>
+        <% } %>
+        <li><a href="/auth/logout" class="btn-nav">Выйти</a></li>
+      <% } else { %>
+        <li><a href="/auth/login">Войти</a></li>
+        <li><a href="/auth/register" class="btn-nav">Регистрация</a></li>
+      <% } %>
+    </ul>
+  </div>
+</nav>
+
+<main class="main-content">
